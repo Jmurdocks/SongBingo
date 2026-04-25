@@ -95,6 +95,7 @@ Read the existing `.gitignore` (if any) and append:
 export const GAME_NAME = 'MUSIC BINGO';
 export const COMPANY_NAME = 'Queen City Games';
 export const SPOTIFY_CLIENT_ID = ''; // Paste your Spotify app Client ID here
+export const REDIRECT_URI = 'http://127.0.0.1:5173'; // Must match exactly what's in your Spotify Developer Dashboard
 
 export const COLORS = {
   navy: '#12005e',
@@ -779,6 +780,7 @@ git commit -m "feat: add WinnerChecker component with quick lookup and prize tie
 
 ```js
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { REDIRECT_URI } from '../config.js';
 
 // --- PKCE helpers ---
 
@@ -893,7 +895,7 @@ export function useSpotify(clientId) {
       const body = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: window.location.origin,
+        redirect_uri: REDIRECT_URI,
         client_id: clientId,
         code_verifier: verifier,
       });
@@ -983,7 +985,7 @@ export function useSpotify(clientId) {
     const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
-      redirect_uri: window.location.origin,
+      redirect_uri: REDIRECT_URI,
       scope: [
         'streaming',
         'user-read-email',
