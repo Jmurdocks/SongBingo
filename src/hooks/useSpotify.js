@@ -235,6 +235,7 @@ export function useSpotify(clientId) {
     playerRef.current = null;
     sessionStorage.removeItem('spotify_access_token');
     sessionStorage.removeItem('spotify_refresh_token');
+    sessionStorage.removeItem('spotify_expires_at');
     setAccessToken(null);
     setRefreshToken(null);
     setIsPremium(null);
