@@ -101,4 +101,13 @@ describe('computeWinners', () => {
     expect(result.first).toContain(1);
     expect(result.second).not.toContain(1);
   });
+
+  it('a blackout sheet appears in all three prize tiers', () => {
+    const cards = [makeCard(0), makeCard(25)];
+    const called = new Set(makeCard(0)); // All 25 songs from card 1 = blackout
+    const result = computeWinners(cards, called);
+    expect(result.third).toContain(1);
+    expect(result.second).toContain(1);
+    expect(result.first).toContain(1);
+  });
 });
