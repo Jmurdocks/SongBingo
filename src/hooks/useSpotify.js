@@ -127,6 +127,7 @@ export function useSpotify(clientId) {
       if (data.access_token) {
         sessionStorage.setItem('spotify_access_token', data.access_token);
         sessionStorage.setItem('spotify_refresh_token', data.refresh_token);
+        sessionStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
         sessionStorage.removeItem('spotify_code_verifier');
         setAccessToken(data.access_token);
         setRefreshToken(data.refresh_token);
@@ -135,6 +136,14 @@ export function useSpotify(clientId) {
       }
     })();
   }, [clientId]);
+
+  // On mount, restart the refresh timer if we restored a token from sessionStorage
+  useEffect(() => {
+    if (!accessToken) return;
+    const expiresAt = parseInt(sessionStorage.getItem('spotify_expires_at') ?? '0', 10);
+    const remainingSec = Math.floor((expiresAt - Date.now()) / 1000);
+    if (remainingSec > 60) scheduleRefresh(remainingSec);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch user profile to check Premium
   useEffect(() => {
@@ -190,6 +199,7 @@ export function useSpotify(clientId) {
       if (data.access_token) {
         sessionStorage.setItem('spotify_access_token', data.access_token);
         if (data.refresh_token) sessionStorage.setItem('spotify_refresh_token', data.refresh_token);
+        sessionStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
         setAccessToken(data.access_token);
         scheduleRefresh(data.expires_in);
       }
@@ -220,6 +230,7 @@ export function useSpotify(clientId) {
   }, [clientId]);
 
   const disconnect = useCallback(() => {
+    clearTimeout(refreshTimerRef.current);
     playerRef.current?.disconnect();
     playerRef.current = null;
     sessionStorage.removeItem('spotify_access_token');
