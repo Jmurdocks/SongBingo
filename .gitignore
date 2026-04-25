@@ -3,3 +3,5 @@ dist/
 .claude/
 *.pdf
 *.png
+.worktrees/
+.superpowers/
