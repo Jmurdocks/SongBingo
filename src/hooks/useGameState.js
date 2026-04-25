@@ -60,7 +60,7 @@ export function useGameState() {
 
   function resetGame() {
     setCalledSongs([]);
-    setSelected(Array.from({ length: cardCount }, () => Array(25).fill(false)));
+    setSelected(prev => Array.from({ length: prev.length }, () => Array(25).fill(false)));
     setCurrentCard(0);
   }
 
@@ -75,38 +75,41 @@ export function useGameState() {
   }
 
   function addManualSong(name) {
-    if (!name.trim()) return;
-    if (songs.some(s => s.name === name.trim())) return;
-    setSongs(prev => [...prev, { name: name.trim(), artist: null, uri: null, id: null, durationMs: null }]);
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSongs(prev => {
+      if (prev.some(s => s.name === trimmed)) return prev;
+      return [...prev, { name: trimmed, artist: null, uri: null, id: null, durationMs: null }];
+    });
   }
 
   function removeSong(index) {
     setSongs(prev => prev.filter((_, i) => i !== index));
   }
 
-  function savePlaylist(name) {
+  const savePlaylist = useCallback((name) => {
     if (!name.trim() || songs.length < 25) return;
     const updated = { ...playlists, [name.trim()]: songs };
     setPlaylists(updated);
     savePlaylists(updated);
-  }
+  }, [songs, playlists]);
 
-  function loadPlaylist(name) {
+  const loadPlaylist = useCallback((name) => {
     if (playlists[name]) setSongs([...playlists[name]]);
-  }
+  }, [playlists]);
 
-  function deletePlaylist(name) {
+  const deletePlaylist = useCallback((name) => {
     const updated = { ...playlists };
     delete updated[name];
     setPlaylists(updated);
     savePlaylists(updated);
-  }
+  }, [playlists]);
 
-  function applyCardCount(input) {
-    const v = parseInt(input);
+  const applyCardCount = useCallback((input) => {
+    const v = parseInt(input, 10);
     if (v >= 1 && v <= 500) setCardCount(v);
     else setCardCountInput(String(cardCount));
-  }
+  }, [cardCount]);
 
   return {
     songs, songNames, setSongsFromSpotify, addManualSong, removeSong, shuffleSongs,
