@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { REDIRECT_URI } from '../config.js';
 
-// --- PKCE helpers ---
-
 function generateCodeVerifier() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -22,30 +20,31 @@ function extractPlaylistId(input) {
   return match ? match[1] : input.trim();
 }
 
-// --- Spotify API helpers ---
-
 async function apiGet(url, accessToken) {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error(`Spotify API error ${res.status}: ${url}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`Spotify API error ${res.status}: ${body?.error?.message ?? url}`);
+  }
   return res.json();
 }
 
 async function fetchAllTracks(playlistId, accessToken) {
   const tracks = [];
-  let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,artists,uri,duration_ms,id)),next`;
+  let url = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=100`;
   while (url) {
     const data = await apiGet(url, accessToken);
     tracks.push(
       ...data.items
-        .filter(item => item.track && !item.track.is_local && item.track.uri)
+        .filter(item => item.item && !item.is_local && item.item.uri && item.item.type === 'track')
         .map(item => ({
-          name: item.track.name,
-          artist: item.track.artists[0]?.name ?? '',
-          uri: item.track.uri,
-          id: item.track.id,
-          durationMs: item.track.duration_ms,
+          name: item.item.name,
+          artist: item.item.artists[0]?.name ?? '',
+          uri: item.item.uri,
+          id: item.item.id,
+          durationMs: item.item.duration_ms,
         }))
     );
     url = data.next;
@@ -53,8 +52,6 @@ async function fetchAllTracks(playlistId, accessToken) {
   return tracks;
 }
 
-// Detect hook start using Audio Analysis API.
-// Falls back to 40% of duration if the API is unavailable (deprecated for new apps).
 async function detectHookStart(trackId, durationMs, accessToken) {
   try {
     const analysis = await apiGet(
@@ -74,7 +71,6 @@ async function detectHookStart(trackId, durationMs, accessToken) {
   }
 }
 
-// Load the Spotify Web Playback SDK script once
 function loadSDK() {
   return new Promise(resolve => {
     if (window.Spotify) { resolve(); return; }
@@ -84,8 +80,6 @@ function loadSDK() {
     document.head.appendChild(script);
   });
 }
-
-// --- Hook ---
 
 export function useSpotify(clientId) {
   const [accessToken, setAccessToken] = useState(() =>
@@ -101,7 +95,6 @@ export function useSpotify(clientId) {
   const playerRef = useRef(null);
   const refreshTimerRef = useRef(null);
 
-  // Handle OAuth callback: exchange code for tokens
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -137,7 +130,6 @@ export function useSpotify(clientId) {
     })();
   }, [clientId]);
 
-  // On mount, restart the refresh timer if we restored a token from sessionStorage
   useEffect(() => {
     if (!accessToken) return;
     const expiresAt = parseInt(sessionStorage.getItem('spotify_expires_at') ?? '0', 10);
@@ -145,7 +137,6 @@ export function useSpotify(clientId) {
     if (remainingSec > 60) scheduleRefresh(remainingSec);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch user profile to check Premium
   useEffect(() => {
     if (!accessToken) return;
     apiGet('https://api.spotify.com/v1/me', accessToken)
@@ -153,7 +144,6 @@ export function useSpotify(clientId) {
       .catch(() => {});
   }, [accessToken]);
 
-  // Initialize Web Playback SDK once we have a token
   useEffect(() => {
     if (!accessToken || !isPremium) return;
     loadSDK().then(() => {

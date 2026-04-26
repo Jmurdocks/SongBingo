@@ -13,8 +13,6 @@ function savePlaylists(playlists) {
 }
 
 export function useGameState() {
-  // songs: array of { name, artist, uri, id, durationMs }
-  // For manually added songs: uri/id/durationMs will be null
   const [songs, setSongs] = useState([]);
   const [cardCount, setCardCount] = useState(50);
   const [cardCountInput, setCardCountInput] = useState('50');
@@ -69,7 +67,6 @@ export function useGameState() {
   }
 
   function setSongsFromSpotify(trackList) {
-    // trackList: array of { name, artist, uri, id, durationMs }
     setSongs(trackList);
     resetGame();
   }
@@ -107,7 +104,7 @@ export function useGameState() {
 
   const applyCardCount = useCallback((input) => {
     const v = parseInt(input, 10);
-    if (v >= 1 && v <= 500) setCardCount(v);
+    if (v >= 2 && v <= 1000) setCardCount(v);
     else setCardCountInput(String(cardCount));
   }, [cardCount]);
 

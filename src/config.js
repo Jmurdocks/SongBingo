@@ -1,7 +1,7 @@
-export const GAME_NAME = 'MUSIC BINGO';
+export const GAME_NAME = 'Musical Bingo';
 export const COMPANY_NAME = 'Queen City Games';
-export const SPOTIFY_CLIENT_ID = ''; // Paste your Spotify app Client ID here
-export const REDIRECT_URI = 'http://127.0.0.1:5173'; // Must match exactly what's in your Spotify Developer Dashboard
+export const SPOTIFY_CLIENT_ID = '8959779441e048de97c586c1a06ac2a1';
+export const REDIRECT_URI = 'http://127.0.0.1:5173';
 
 export const COLORS = {
   navy: '#12005e',
