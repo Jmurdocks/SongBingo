@@ -5,3 +5,5 @@ dist/
 *.png
 .worktrees/
 .superpowers/
+.playwright-cli/page-2026-04-25T17-49-38-525Z.yml
+.playwright-cli/console-2026-04-25T17-49-35-103Z.log
