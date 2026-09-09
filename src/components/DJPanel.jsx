@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { COLORS } from '../config.js';
 
-export default function DJPanel({ songs, onAddCalledSong, onOpenWinners, onExit, spotify }) {
+export default function DJPanel({ songs, winnerWindows = [], onAddCalledSong, onOpenWinners, onExit, spotify }) {
   const [queue] = useState(() => [...songs]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playedSongs, setPlayedSongs] = useState([]);
@@ -100,6 +100,10 @@ export default function DJPanel({ songs, onAddCalledSong, onOpenWinners, onExit,
   const hookDisplay = `${Math.floor(hookMs / 60000)}:${String(Math.floor((hookMs % 60000) / 1000)).padStart(2, '0')}`;
   const isAuto = currentSong && hookOffsets[currentSong.id] === undefined;
 
+  const songNumber = currentIndex + 1;
+  const activeWindow = winnerWindows.find(w => songNumber >= w.min && songNumber <= w.max);
+  const nextWindow = !activeWindow && winnerWindows.find(w => songNumber < w.min);
+
   const btn = { borderRadius: '10px', fontWeight: '700', cursor: 'pointer', border: 'none' };
 
   return (
@@ -125,8 +129,20 @@ export default function DJPanel({ songs, onAddCalledSong, onOpenWinners, onExit,
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px' }}>
           <button onClick={onExit} style={{ ...btn, background: 'rgba(255,255,255,0.1)', color: 'white', padding: '8px 16px', fontSize: '13px', border: '1px solid rgba(255,255,255,0.25)' }}>✕ Exit</button>
-          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600' }}>
-            {isEnd ? 'All songs played!' : `Song ${currentIndex + 1} of ${queue.length}`}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600' }}>
+              {isEnd ? 'All songs played!' : `Song ${currentIndex + 1} of ${queue.length}`}
+            </div>
+            {!isEnd && activeWindow && (
+              <div style={{ marginTop: '4px', background: 'rgba(255,193,7,0.25)', border: '1px solid rgba(255,193,7,0.7)', borderRadius: '6px', padding: '3px 12px', fontSize: '12px', fontWeight: '800', color: '#ffd54f', letterSpacing: '0.5px' }}>
+                {'🏆'} {activeWindow.label} Winner Window · Songs {activeWindow.min}–{activeWindow.max}
+              </div>
+            )}
+            {!isEnd && !activeWindow && nextWindow && (
+              <div style={{ marginTop: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
+                {nextWindow.label} window opens at song {nextWindow.min}
+              </div>
+            )}
           </div>
           <button onClick={onOpenWinners} style={{ ...btn, background: 'rgba(98,0,234,0.45)', color: 'white', padding: '8px 16px', fontSize: '13px', border: '1px solid rgba(255,255,255,0.35)' }}>🏆 Winners</button>
         </div>

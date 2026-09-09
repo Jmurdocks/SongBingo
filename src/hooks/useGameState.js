@@ -3,6 +3,12 @@ import { generateCard, shuffle } from '../utils/cardUtils.js';
 
 const STORAGE_KEY = 'bingo-playlists';
 
+const DEFAULT_WINNER_WINDOWS = [
+  { min: 20, max: 30, label: '1st Prize' },
+  { min: 40, max: 50, label: '2nd Prize' },
+  { min: 60, max: 75, label: '3rd Prize' },
+];
+
 function loadPlaylists() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
   catch { return {}; }
@@ -14,6 +20,8 @@ function savePlaylists(playlists) {
 
 export function useGameState() {
   const [songs, setSongs] = useState([]);
+  const [activeSongs, setActiveSongs] = useState([]);
+  const [winnerWindows, setWinnerWindows] = useState(DEFAULT_WINNER_WINDOWS);
   const [cardCount, setCardCount] = useState(50);
   const [cardCountInput, setCardCountInput] = useState('50');
   const [selected, setSelected] = useState(() =>
@@ -57,6 +65,16 @@ export function useGameState() {
   }
 
   function resetGame() {
+    setCalledSongs([]);
+    setActiveSongs([]);
+    setSelected(prev => Array.from({ length: prev.length }, () => Array(25).fill(false)));
+    setCurrentCard(0);
+  }
+
+  function prepareGame(playCount) {
+    const count = Math.min(Math.max(1, playCount), songs.length);
+    const shuffled = shuffle([...songs], Date.now());
+    setActiveSongs(shuffled.slice(0, count));
     setCalledSongs([]);
     setSelected(prev => Array.from({ length: prev.length }, () => Array(25).fill(false)));
     setCurrentCard(0);
@@ -110,6 +128,8 @@ export function useGameState() {
 
   return {
     songs, songNames, setSongsFromSpotify, addManualSong, removeSong, shuffleSongs,
+    activeSongs, prepareGame,
+    winnerWindows, setWinnerWindows,
     cardCount, cardCountInput, setCardCountInput, applyCardCount,
     cards, selected, toggleCell,
     calledSongs, addCalledSong, resetGame,
