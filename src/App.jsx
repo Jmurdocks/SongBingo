@@ -56,6 +56,8 @@ export default function App() {
   const spotify = useSpotify(SPOTIFY_CLIENT_ID);
   const [showEditor, setShowEditor] = useState(false);
   const [gameActive, setGameActive] = useState(false);
+  const [showGameSetup, setShowGameSetup] = useState(false);
+  const [songsToPlay, setSongsToPlay] = useState('');
   const [showWinners, setShowWinners] = useState(false);
   const [awardedPrizes, setAwardedPrizes] = useState({ first: false, second: false, third: false });
 
@@ -76,9 +78,17 @@ export default function App() {
 
   function handleStartGame() {
     if (game.songs.length < 25) { alert('Add at least 25 songs before starting.'); return; }
-    game.resetGame();
+    setSongsToPlay(String(game.songs.length));
+    setShowGameSetup(true);
+  }
+
+  function handleBeginGame() {
+    const playCount = parseInt(songsToPlay, 10);
+    if (isNaN(playCount) || playCount < 25) { alert('Songs to play must be at least 25.'); return; }
+    game.prepareGame(playCount);
     setAwardedPrizes({ first: false, second: false, third: false });
     setGameActive(true);
+    setShowGameSetup(false);
     setShowWinners(false);
   }
 
@@ -221,10 +231,81 @@ export default function App() {
         />
       )}
 
+      {showGameSetup && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '32px', width: '520px', maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+            <div style={{ fontSize: '22px', fontWeight: '900', color: COLORS.navy, marginBottom: '8px' }}>Game Setup</div>
+            <div style={{ fontSize: '13px', color: '#666', marginBottom: '24px' }}>
+              Configure how many songs to play and the prize windows.
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontWeight: '700', color: COLORS.navy, marginBottom: '6px', fontSize: '14px' }}>
+                Songs to Play (out of {game.songs.length})
+              </label>
+              <input
+                type="number"
+                min="25"
+                max={game.songs.length}
+                value={songsToPlay}
+                onChange={e => setSongsToPlay(e.target.value)}
+                style={{ width: '100px', padding: '8px 12px', borderRadius: '8px', border: `2px solid ${COLORS.purple}`, fontSize: '15px', fontWeight: '700', color: COLORS.navy }}
+              />
+              <span style={{ marginLeft: '10px', fontSize: '13px', color: '#999' }}>
+                {parseInt(songsToPlay) > 0 && parseInt(songsToPlay) < game.songs.length
+                  ? `${game.songs.length - parseInt(songsToPlay)} songs will be skipped randomly`
+                  : 'All songs will be played'}
+              </span>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontWeight: '700', color: COLORS.navy, marginBottom: '10px', fontSize: '14px' }}>Prize Windows</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {game.winnerWindows.map((w, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ width: '72px', fontSize: '13px', fontWeight: '700', color: COLORS.purple }}>{w.label}</span>
+                    <span style={{ fontSize: '13px', color: '#555' }}>Songs</span>
+                    <input
+                      type="number" min="1"
+                      value={w.min}
+                      onChange={e => {
+                        const updated = game.winnerWindows.map((x, j) => j === i ? { ...x, min: parseInt(e.target.value) || 1 } : x);
+                        game.setWinnerWindows(updated);
+                      }}
+                      style={{ width: '60px', padding: '5px 8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px', textAlign: 'center' }}
+                    />
+                    <span style={{ fontSize: '13px', color: '#555' }}>to</span>
+                    <input
+                      type="number" min="1"
+                      value={w.max}
+                      onChange={e => {
+                        const updated = game.winnerWindows.map((x, j) => j === i ? { ...x, max: parseInt(e.target.value) || 1 } : x);
+                        game.setWinnerWindows(updated);
+                      }}
+                      style={{ width: '60px', padding: '5px 8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px', textAlign: 'center' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowGameSetup(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: '2px solid #ccc', background: 'white', color: '#555', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                Cancel
+              </button>
+              <button onClick={handleBeginGame} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: COLORS.gradient, color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}>
+                Begin Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {gameActive && (
         <>
           <DJPanel
-            songs={game.songs}
+            songs={game.activeSongs}
+            winnerWindows={game.winnerWindows}
             onAddCalledSong={game.addCalledSong}
             onOpenWinners={() => setShowWinners(true)}
             onExit={handleExitGame}
