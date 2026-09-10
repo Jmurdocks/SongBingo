@@ -74,11 +74,24 @@ export function useGameState() {
   }
 
   function prepareGame(playCount) {
-    const count = Math.min(Math.max(1, playCount), songs.length);
-    const shuffled = shuffle([...songs], Date.now());
-    setActiveSongs(shuffled.slice(0, count));
-    // Remaining songs shuffled separately — used as extension if 3rd winner not found
-    setExtensionSongs(shuffle(shuffled.slice(count), Date.now() + 1));
+    const count = Math.min(Math.max(25, playCount), songs.length);
+
+    // Pick 3 random cards and guarantee all their songs are in the active set.
+    // This ensures blackout is achievable on those cards within the main queue.
+    const seed = Date.now();
+    const cardOrder = shuffle(Array.from({ length: cards.length }, (_, i) => i), seed);
+    const required = new Set();
+    for (let i = 0; i < Math.min(3, cardOrder.length) && required.size < count; i++) {
+      cards[cardOrder[i]].forEach(s => required.add(s));
+    }
+
+    const requiredSongs = songs.filter(s => required.has(s.name));
+    const optionalSongs = shuffle(songs.filter(s => !required.has(s.name)), seed + 1);
+    const active = shuffle([...requiredSongs, ...optionalSongs].slice(0, count), seed + 2);
+
+    setActiveSongs(active);
+    const activeNames = new Set(active.map(s => s.name));
+    setExtensionSongs(shuffle(songs.filter(s => !activeNames.has(s.name)), seed + 3));
     setCalledSongs([]);
     setSelected(prev => Array.from({ length: prev.length }, () => Array(25).fill(false)));
     setCurrentCard(0);

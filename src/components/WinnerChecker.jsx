@@ -21,7 +21,7 @@ export default function WinnerChecker({ cards, calledSongs, onClose, awarded, on
   const tierConfig = [
     { key: 'first',  label: '1st Prize', desc: '1 Line',              color: '#ffd700', bg: 'rgba(255,215,0,0.12)',   border: 'rgba(255,215,0,0.35)'   },
     { key: 'second', label: '2nd Prize', desc: '2 Lines on 1 Card',   color: '#c0c0c0', bg: 'rgba(192,192,192,0.1)', border: 'rgba(192,192,192,0.35)' },
-    { key: 'third',  label: '3rd Prize', desc: '3 Lines on 1 Card',   color: '#cd7f32', bg: 'rgba(205,127,50,0.1)',  border: 'rgba(205,127,50,0.35)'  },
+    { key: 'third',  label: '3rd Prize', desc: 'Blackout on 1 Card',  color: '#cd7f32', bg: 'rgba(205,127,50,0.1)',  border: 'rgba(205,127,50,0.35)'  },
   ];
 
   const btn = {
