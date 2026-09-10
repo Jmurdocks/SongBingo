@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { COLORS } from '../config.js';
 
-export default function DJPanel({ songs, winnerWindows = [], onAddCalledSong, onOpenWinners, onExit, spotify }) {
-  const [queue] = useState(() => [...songs]);
+export default function DJPanel({ songs, extensionSongs = [], winnerWindows = [], onAddCalledSong, onOpenWinners, onExit, spotify }) {
+  const [queue] = useState(() => [...songs, ...extensionSongs]);
+  const mainQueueLength = songs.length;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playedSongs, setPlayedSongs] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -101,8 +102,9 @@ export default function DJPanel({ songs, winnerWindows = [], onAddCalledSong, on
   const isAuto = currentSong && hookOffsets[currentSong.id] === undefined;
 
   const songNumber = currentIndex + 1;
-  const activeWindow = winnerWindows.find(w => songNumber >= w.min && songNumber <= w.max);
-  const nextWindow = !activeWindow && winnerWindows.find(w => songNumber < w.min);
+  const isExtension = currentIndex >= mainQueueLength;
+  const activeWindow = !isExtension && winnerWindows.find(w => songNumber >= w.min && songNumber <= w.max);
+  const nextWindow = !isExtension && !activeWindow && winnerWindows.find(w => songNumber < w.min);
 
   const btn = { borderRadius: '10px', fontWeight: '700', cursor: 'pointer', border: 'none' };
 
@@ -131,14 +133,21 @@ export default function DJPanel({ songs, winnerWindows = [], onAddCalledSong, on
           <button onClick={onExit} style={{ ...btn, background: 'rgba(255,255,255,0.1)', color: 'white', padding: '8px 16px', fontSize: '13px', border: '1px solid rgba(255,255,255,0.25)' }}>✕ Exit</button>
           <div style={{ textAlign: 'center' }}>
             <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600' }}>
-              {isEnd ? 'All songs played!' : `Song ${currentIndex + 1} of ${queue.length}`}
+              {isEnd ? 'All songs played!' : isExtension
+                ? `Extension · Song ${currentIndex - mainQueueLength + 1} of ${queue.length - mainQueueLength}`
+                : `Song ${currentIndex + 1} of ${mainQueueLength}`}
             </div>
+            {!isEnd && isExtension && (
+              <div style={{ marginTop: '4px', background: 'rgba(255,87,34,0.25)', border: '1px solid rgba(255,87,34,0.7)', borderRadius: '6px', padding: '3px 12px', fontSize: '12px', fontWeight: '800', color: '#ff8a65', letterSpacing: '0.5px' }}>
+                Extension — still looking for remaining winners
+              </div>
+            )}
             {!isEnd && activeWindow && (
               <div style={{ marginTop: '4px', background: 'rgba(255,193,7,0.25)', border: '1px solid rgba(255,193,7,0.7)', borderRadius: '6px', padding: '3px 12px', fontSize: '12px', fontWeight: '800', color: '#ffd54f', letterSpacing: '0.5px' }}>
                 {'🏆'} {activeWindow.label} Winner Window · Songs {activeWindow.min}–{activeWindow.max}
               </div>
             )}
-            {!isEnd && !activeWindow && nextWindow && (
+            {!isEnd && !activeWindow && !isExtension && nextWindow && (
               <div style={{ marginTop: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
                 {nextWindow.label} window opens at song {nextWindow.min}
               </div>
