@@ -305,6 +305,7 @@ export default function App() {
         <>
           <DJPanel
             songs={game.activeSongs}
+            extensionSongs={game.extensionSongs}
             winnerWindows={game.winnerWindows}
             onAddCalledSong={game.addCalledSong}
             onOpenWinners={() => setShowWinners(true)}

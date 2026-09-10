@@ -21,6 +21,7 @@ function savePlaylists(playlists) {
 export function useGameState() {
   const [songs, setSongs] = useState([]);
   const [activeSongs, setActiveSongs] = useState([]);
+  const [extensionSongs, setExtensionSongs] = useState([]);
   const [winnerWindows, setWinnerWindows] = useState(DEFAULT_WINNER_WINDOWS);
   const [cardCount, setCardCount] = useState(50);
   const [cardCountInput, setCardCountInput] = useState('50');
@@ -44,14 +45,11 @@ export function useGameState() {
   }, [cardCount]);
 
   const songNames = useMemo(() => songs.map(s => s.name), [songs]);
-  const activeSongNames = useMemo(() => activeSongs.map(s => s.name), [activeSongs]);
 
-  // When a game is active, generate cards from the active pool so every cell
-  // on every card can be called — guaranteeing winners in each prize window.
-  const cards = useMemo(() => {
-    const pool = activeSongs.length >= 25 ? activeSongNames : songNames;
-    return Array.from({ length: cardCount }, (_, i) => generateCard(pool, i));
-  }, [activeSongNames, songNames, activeSongs.length, cardCount]);
+  const cards = useMemo(
+    () => Array.from({ length: cardCount }, (_, i) => generateCard(songNames, i)),
+    [songNames, cardCount]
+  );
 
   const toggleCell = useCallback((cardIdx, cellIdx) => {
     setSelected(prev => {
@@ -70,6 +68,7 @@ export function useGameState() {
   function resetGame() {
     setCalledSongs([]);
     setActiveSongs([]);
+    setExtensionSongs([]);
     setSelected(prev => Array.from({ length: prev.length }, () => Array(25).fill(false)));
     setCurrentCard(0);
   }
@@ -78,6 +77,8 @@ export function useGameState() {
     const count = Math.min(Math.max(1, playCount), songs.length);
     const shuffled = shuffle([...songs], Date.now());
     setActiveSongs(shuffled.slice(0, count));
+    // Remaining songs shuffled separately — used as extension if 3rd winner not found
+    setExtensionSongs(shuffle(shuffled.slice(count), Date.now() + 1));
     setCalledSongs([]);
     setSelected(prev => Array.from({ length: prev.length }, () => Array(25).fill(false)));
     setCurrentCard(0);
@@ -131,7 +132,7 @@ export function useGameState() {
 
   return {
     songs, songNames, setSongsFromSpotify, addManualSong, removeSong, shuffleSongs,
-    activeSongs, prepareGame,
+    activeSongs, extensionSongs, prepareGame,
     winnerWindows, setWinnerWindows,
     cardCount, cardCountInput, setCardCountInput, applyCardCount,
     cards, selected, toggleCell,
