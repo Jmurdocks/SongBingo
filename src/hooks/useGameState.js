@@ -44,11 +44,14 @@ export function useGameState() {
   }, [cardCount]);
 
   const songNames = useMemo(() => songs.map(s => s.name), [songs]);
+  const activeSongNames = useMemo(() => activeSongs.map(s => s.name), [activeSongs]);
 
-  const cards = useMemo(
-    () => Array.from({ length: cardCount }, (_, i) => generateCard(songNames, i)),
-    [songNames, cardCount]
-  );
+  // When a game is active, generate cards from the active pool so every cell
+  // on every card can be called — guaranteeing winners in each prize window.
+  const cards = useMemo(() => {
+    const pool = activeSongs.length >= 25 ? activeSongNames : songNames;
+    return Array.from({ length: cardCount }, (_, i) => generateCard(pool, i));
+  }, [activeSongNames, songNames, activeSongs.length, cardCount]);
 
   const toggleCell = useCallback((cardIdx, cellIdx) => {
     setSelected(prev => {
