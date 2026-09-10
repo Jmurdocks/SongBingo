@@ -36,7 +36,7 @@ export function computeWinners(cards, calledSongsSet) {
     const blackoutB = cardB ? isBlackout(cardB, calledSongsSet) : false;
     const sheet = s + 1;
 
-    if (blackoutA || blackoutB) third.push(sheet);
+    if (linesA >= 3 || linesB >= 3) third.push(sheet);
     if (linesA >= 2 || linesB >= 2) second.push(sheet);
     if (linesA >= 1 || linesB >= 1) first.push(sheet);
   }
