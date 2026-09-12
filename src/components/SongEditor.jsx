@@ -16,6 +16,7 @@ export default function SongEditor({
   const [loadError, setLoadError] = useState(null);
   const [userPlaylists, setUserPlaylists] = useState(null);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [playlistsError, setPlaylistsError] = useState(null);
   const fileRef = useRef();
   const addInputRef = useRef();
 
@@ -23,10 +24,12 @@ export default function SongEditor({
 
   async function loadUserPlaylists() {
     setPlaylistsLoading(true);
+    setPlaylistsError(null);
     try {
       const lists = await spotify.fetchUserPlaylists();
       setUserPlaylists(lists);
-    } catch {
+    } catch (e) {
+      setPlaylistsError(e.message ?? 'Failed to load playlists');
       setUserPlaylists([]);
     } finally {
       setPlaylistsLoading(false);
@@ -144,6 +147,11 @@ export default function SongEditor({
                       <span style={{ fontSize: '12px', fontWeight: '700', color: '#555' }}>Your Spotify Playlists</span>
                       <button onClick={loadUserPlaylists} style={{ ...btnBase, background: 'none', border: '1px solid #e0e0e0', color: '#888', fontSize: '11px', padding: '3px 8px' }}>↻ Refresh</button>
                     </div>
+                    {playlistsError && (
+                      <div style={{ background: '#fff3e0', border: '1px solid #ff9800', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#e65100' }}>
+                        ⚠ {playlistsError}
+                      </div>
+                    )}
                     {userPlaylists.length === 0 && (
                       <div style={{ fontSize: '13px', color: '#999', textAlign: 'center', padding: '16px 0' }}>No playlists found.</div>
                     )}
