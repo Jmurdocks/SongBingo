@@ -60,7 +60,7 @@ export default function DJPanel({ songs, extensionSongs = [], winnerWindows = []
       setElapsed(0);
       setIsPlaying(true);
     } catch (e) {
-      setPlayError('Playback failed. Is Spotify connected?');
+      setPlayError(e.message || 'Playback failed. Is Spotify connected?');
     }
   }
 

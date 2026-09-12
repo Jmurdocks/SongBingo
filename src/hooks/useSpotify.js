@@ -15,6 +15,10 @@ async function generateCodeChallenge(verifier) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+function isMobileBrowser() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
 function extractPlaylistId(input) {
   const match = input.match(/playlist\/([a-zA-Z0-9]+)/);
   return match ? match[1] : input.trim();
@@ -145,7 +149,7 @@ export function useSpotify(clientId) {
   }, [accessToken]);
 
   useEffect(() => {
-    if (!accessToken || !isPremium) return;
+    if (!accessToken || !isPremium || isMobileBrowser()) return;
     loadSDK().then(() => {
       const player = new window.Spotify.Player({
         name: 'Queen City Games Music Bingo',
@@ -239,15 +243,32 @@ export function useSpotify(clientId) {
   }, [accessToken]);
 
   const playTrack = useCallback(async (trackUri, positionMs) => {
-    if (!accessToken || !deviceId) return;
-    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    if (!accessToken) return;
+    let targetDeviceId = deviceId;
+    if (!targetDeviceId) {
+      const devicesData = await apiGet('https://api.spotify.com/v1/me/player/devices', accessToken);
+      const devices = devicesData.devices ?? [];
+      const active = devices.find(d => d.is_active) ?? devices[0];
+      if (!active) throw new Error('No active Spotify device found. Open the Spotify app on this device, play any song, then try again.');
+      targetDeviceId = active.id;
+    }
+    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${targetDeviceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ uris: [trackUri], position_ms: positionMs }),
     });
   }, [accessToken, deviceId]);
 
-  const pausePlayback = useCallback(() => playerRef.current?.pause(), []);
+  const pausePlayback = useCallback(async () => {
+    if (playerRef.current) {
+      playerRef.current.pause();
+    } else if (accessToken) {
+      await fetch('https://api.spotify.com/v1/me/player/pause', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).catch(() => {});
+    }
+  }, [accessToken]);
   const resumePlayback = useCallback(() => playerRef.current?.resume(), []);
 
   const getHookStart = useCallback(async (trackId, durationMs) => {
