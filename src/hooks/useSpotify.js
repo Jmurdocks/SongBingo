@@ -49,6 +49,7 @@ async function fetchAllTracks(playlistId, accessToken) {
           uri: item.item.uri,
           id: item.item.id,
           durationMs: item.item.duration_ms,
+          previewUrl: item.item.preview_url ?? null,
         }))
     );
     url = data.next;
@@ -97,6 +98,7 @@ export function useSpotify(clientId) {
   const [deviceId, setDeviceId] = useState(null);
   const [sdkError, setSdkError] = useState(null);
   const playerRef = useRef(null);
+  const audioRef = useRef(null);
   const refreshTimerRef = useRef(null);
 
   useEffect(() => {
@@ -225,6 +227,7 @@ export function useSpotify(clientId) {
 
   const disconnect = useCallback(() => {
     clearTimeout(refreshTimerRef.current);
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     playerRef.current?.disconnect();
     playerRef.current = null;
     sessionStorage.removeItem('spotify_access_token');
@@ -242,16 +245,19 @@ export function useSpotify(clientId) {
     return fetchAllTracks(extractPlaylistId(urlOrId), accessToken);
   }, [accessToken]);
 
-  const playTrack = useCallback(async (trackUri, positionMs) => {
+  const playTrack = useCallback(async (trackUri, positionMs, previewUrl) => {
     if (!accessToken) return;
-    let targetDeviceId = deviceId;
-    if (!targetDeviceId) {
-      const devicesData = await apiGet('https://api.spotify.com/v1/me/player/devices', accessToken);
-      const devices = devicesData.devices ?? [];
-      const active = devices.find(d => d.is_active) ?? devices[0];
-      if (!active) throw new Error('No active Spotify device found. Open the Spotify app on this device, play any song, then try again.');
-      targetDeviceId = active.id;
+    if (isMobileBrowser()) {
+      if (!previewUrl) throw new Error('No preview available for this song. Re-import your playlist from Spotify to enable mobile playback.');
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      const audio = new Audio(previewUrl);
+      audio.volume = 1.0;
+      audioRef.current = audio;
+      await audio.play();
+      return;
     }
+    let targetDeviceId = deviceId;
+    if (!targetDeviceId) throw new Error('Spotify player not ready yet. Wait a moment and try again.');
     await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${targetDeviceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -259,11 +265,11 @@ export function useSpotify(clientId) {
     });
   }, [accessToken, deviceId]);
 
-  const pausePlayback = useCallback(async () => {
-    if (playerRef.current) {
-      playerRef.current.pause();
-    } else if (accessToken) {
-      await fetch('https://api.spotify.com/v1/me/player/pause', {
+  const pausePlayback = useCallback(() => {
+    if (audioRef.current) { audioRef.current.pause(); return; }
+    if (playerRef.current) { playerRef.current.pause(); return; }
+    if (accessToken) {
+      fetch('https://api.spotify.com/v1/me/player/pause', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${accessToken}` },
       }).catch(() => {});

@@ -55,7 +55,7 @@ export default function DJPanel({ songs, extensionSongs = [], winnerWindows = []
     setPlayError(null);
     const startMs = getHookStart(currentSong);
     try {
-      await spotify.playTrack(currentSong.uri, startMs);
+      await spotify.playTrack(currentSong.uri, startMs, currentSong.previewUrl ?? null);
       playStartRef.current = Date.now();
       setElapsed(0);
       setIsPlaying(true);
