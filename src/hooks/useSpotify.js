@@ -245,6 +245,23 @@ export function useSpotify(clientId) {
     return fetchAllTracks(extractPlaylistId(urlOrId), accessToken);
   }, [accessToken]);
 
+  const fetchUserPlaylists = useCallback(async () => {
+    if (!accessToken) throw new Error('Not authenticated');
+    const playlists = [];
+    let url = 'https://api.spotify.com/v1/me/playlists?limit=50';
+    while (url) {
+      const data = await apiGet(url, accessToken);
+      playlists.push(...data.items.filter(Boolean).map(p => ({
+        id: p.id,
+        name: p.name,
+        trackCount: p.tracks.total,
+        image: p.images?.[0]?.url ?? null,
+      })));
+      url = data.next;
+    }
+    return playlists;
+  }, [accessToken]);
+
   const playTrack = useCallback(async (trackUri, positionMs, previewUrl) => {
     if (!accessToken) return;
     if (isMobileBrowser()) {
@@ -290,6 +307,7 @@ export function useSpotify(clientId) {
     connect,
     disconnect,
     fetchPlaylist,
+    fetchUserPlaylists,
     playTrack,
     pausePlayback,
     resumePlayback,

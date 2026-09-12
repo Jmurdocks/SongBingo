@@ -14,17 +14,32 @@ export default function SongEditor({
   const [saveNameInput, setSaveNameInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [userPlaylists, setUserPlaylists] = useState(null);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const fileRef = useRef();
   const addInputRef = useRef();
 
   const isValid = songs.length >= 25;
 
-  async function handleLoadSpotifyPlaylist() {
-    if (!playlistInput.trim()) return;
+  async function loadUserPlaylists() {
+    setPlaylistsLoading(true);
+    try {
+      const lists = await spotify.fetchUserPlaylists();
+      setUserPlaylists(lists);
+    } catch {
+      setUserPlaylists([]);
+    } finally {
+      setPlaylistsLoading(false);
+    }
+  }
+
+  async function handleLoadSpotifyPlaylist(idOrUrl) {
+    const target = idOrUrl ?? playlistInput.trim();
+    if (!target) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const tracks = await spotify.fetchPlaylist(playlistInput.trim());
+      const tracks = await spotify.fetchPlaylist(target);
       onLoadFromSpotify(tracks);
       setPlaylistInput('');
       setTab('edit');
@@ -110,11 +125,50 @@ export default function SongEditor({
                     ⚠ {spotify.sdkError}
                   </div>
                 )}
-                <div style={{ background: COLORS.purplePale, border: `1px solid ${COLORS.purpleSoft}`, borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: COLORS.navy }}>
-                  ✓ Connected to Spotify {spotify.isPremium ? '(Premium)' : '(Free — playback unavailable)'}
+                <div style={{ background: COLORS.purplePale, border: `1px solid ${COLORS.purpleSoft}`, borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: COLORS.navy, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>✓ Connected to Spotify {spotify.isPremium ? '(Premium)' : '(Free)'}</span>
+                  <button onClick={spotify.disconnect} style={{ ...btnBase, background: 'none', border: '1px solid #ccc', color: '#999', fontSize: '11px', padding: '4px 10px' }}>Disconnect</button>
                 </div>
+
+                {userPlaylists === null ? (
+                  <button
+                    onClick={loadUserPlaylists}
+                    disabled={playlistsLoading}
+                    style={{ ...btnBase, background: COLORS.gradient, color: 'white', padding: '11px', fontSize: '14px' }}
+                  >
+                    {playlistsLoading ? 'Loading...' : '📋 Browse My Playlists'}
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#555' }}>Your Spotify Playlists</span>
+                      <button onClick={loadUserPlaylists} style={{ ...btnBase, background: 'none', border: '1px solid #e0e0e0', color: '#888', fontSize: '11px', padding: '3px 8px' }}>↻ Refresh</button>
+                    </div>
+                    {userPlaylists.length === 0 && (
+                      <div style={{ fontSize: '13px', color: '#999', textAlign: 'center', padding: '16px 0' }}>No playlists found.</div>
+                    )}
+                    {userPlaylists.map(p => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: '#fafafa', border: `1px solid ${COLORS.purpleSoft}`, borderRadius: '8px' }}>
+                        {p.image && <img src={p.image} alt="" style={{ width: '36px', height: '36px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} />}
+                        {!p.image && <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: COLORS.purplePale, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🎵</div>}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: COLORS.navy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                          <div style={{ fontSize: '11px', color: '#888' }}>{p.trackCount} tracks</div>
+                        </div>
+                        <button
+                          onClick={() => handleLoadSpotifyPlaylist(p.id)}
+                          disabled={loading}
+                          style={{ ...btnBase, background: loading ? '#e0e0e0' : COLORS.gradient, color: loading ? '#9e9e9e' : 'white', fontSize: '12px', padding: '6px 12px', flexShrink: 0 }}
+                        >
+                          {loading ? '...' : 'Load'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#555', display: 'block', marginBottom: '6px' }}>Paste playlist URL or ID</label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#aaa', display: 'block', marginBottom: '6px' }}>Or paste a playlist URL</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       value={playlistInput}
@@ -124,7 +178,7 @@ export default function SongEditor({
                       style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: `2px solid ${COLORS.purpleSoft}`, outline: 'none', fontSize: '13px' }}
                     />
                     <button
-                      onClick={handleLoadSpotifyPlaylist}
+                      onClick={() => handleLoadSpotifyPlaylist()}
                       disabled={loading || !playlistInput.trim()}
                       style={{ ...btnBase, background: loading || !playlistInput.trim() ? '#e0e0e0' : COLORS.gradient, color: loading || !playlistInput.trim() ? '#9e9e9e' : 'white' }}
                     >
@@ -133,9 +187,6 @@ export default function SongEditor({
                   </div>
                   {loadError && <div style={{ fontSize: '12px', color: '#c62828', marginTop: '6px' }}>⚠ {loadError}</div>}
                 </div>
-                <button onClick={spotify.disconnect} style={{ ...btnBase, background: 'none', border: '1px solid #e0e0e0', color: '#999', fontSize: '12px' }}>
-                  Disconnect
-                </button>
               </>
             )}
           </div>
