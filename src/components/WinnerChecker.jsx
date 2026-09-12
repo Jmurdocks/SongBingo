@@ -4,7 +4,7 @@ import { COLORS } from '../config.js';
 
 // awarded: { first: bool, second: bool, third: bool } — lifted to App.jsx so it persists across open/close
 // onAward(key): called when host marks a tier as awarded
-export default function WinnerChecker({ cards, calledSongs, onClose, awarded, onAward }) {
+export default function WinnerChecker({ cards, calledSongs, onClose, awarded, onAward, drawer = false }) {
   const [lookupInput, setLookupInput] = useState('');
 
   const calledSet = useMemo(() => new Set(calledSongs), [calledSongs]);
@@ -28,17 +28,17 @@ export default function WinnerChecker({ cards, calledSongs, onClose, awarded, on
     borderRadius: '8px', fontWeight: '700', cursor: 'pointer', border: 'none',
   };
 
+  const containerStyle = drawer
+    ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '400px', maxWidth: '92vw', zIndex: 1300, background: '#1a0040', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', color: 'white', overflowY: 'auto', boxShadow: '-8px 0 40px rgba(0,0,0,0.6)' }
+    : { position: 'fixed', inset: 0, zIndex: 1300, background: '#1a0040', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', color: 'white', overflowY: 'auto' };
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1300,
-      background: '#1a0040', display: 'flex', flexDirection: 'column',
-      fontFamily: 'sans-serif', color: 'white', overflowY: 'auto',
-    }}>
+    <div style={containerStyle}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 6px' }}>
         <div style={{ fontSize: '20px', fontWeight: '900', fontFamily: 'Georgia, serif' }}>🏆 Winner Checker</div>
         <button onClick={onClose} style={{ ...btn, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '7px 14px', fontSize: '13px' }}>
-          ✕ Back to Game
+          {drawer ? '✕ Close' : '✕ Back to Game'}
         </button>
       </div>
       <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', padding: '0 24px 20px' }}>

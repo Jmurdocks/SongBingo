@@ -4,7 +4,6 @@ import { useSpotify } from './hooks/useSpotify.js';
 import BingoCard from './components/BingoCard.jsx';
 import SongEditor from './components/SongEditor.jsx';
 import DJPanel from './components/DJPanel.jsx';
-import WinnerChecker from './components/WinnerChecker.jsx';
 import { COLORS, COMPANY_NAME, GAME_NAME, SPOTIFY_CLIENT_ID } from './config.js';
 
 const EMPTY_ROW = Array(25).fill(false);
@@ -58,7 +57,6 @@ export default function App() {
   const [gameActive, setGameActive] = useState(false);
   const [showGameSetup, setShowGameSetup] = useState(false);
   const [songsToPlay, setSongsToPlay] = useState('');
-  const [showWinners, setShowWinners] = useState(false);
   const [awardedPrizes, setAwardedPrizes] = useState({ first: false, second: false, third: false });
 
   const sheetCount = Math.ceil(game.cardCount / 2);
@@ -94,7 +92,6 @@ export default function App() {
 
   function handleExitGame() {
     setGameActive(false);
-    setShowWinners(false);
   }
 
   const btnStyle = {
@@ -308,19 +305,13 @@ export default function App() {
             extensionSongs={game.extensionSongs}
             winnerWindows={game.winnerWindows}
             onAddCalledSong={game.addCalledSong}
-            onOpenWinners={() => setShowWinners(true)}
             onExit={handleExitGame}
             spotify={spotify}
+            cards={game.cards}
+            calledSongs={game.calledSongs}
+            awarded={awardedPrizes}
+            onAward={key => setAwardedPrizes(prev => ({ ...prev, [key]: true }))}
           />
-          {showWinners && (
-            <WinnerChecker
-              cards={game.cards}
-              calledSongs={game.calledSongs}
-              onClose={() => setShowWinners(false)}
-              awarded={awardedPrizes}
-              onAward={key => setAwardedPrizes(prev => ({ ...prev, [key]: true }))}
-            />
-          )}
         </>
       )}
 

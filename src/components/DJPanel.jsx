@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { COLORS } from '../config.js';
+import WinnerChecker from './WinnerChecker.jsx';
+import { computeWinners } from '../utils/winnerUtils.js';
 
-export default function DJPanel({ songs, extensionSongs = [], winnerWindows = [], onAddCalledSong, onOpenWinners, onExit, spotify }) {
+export default function DJPanel({ songs, extensionSongs = [], winnerWindows = [], onAddCalledSong, onExit, spotify, cards = [], calledSongs = [], awarded = {}, onAward }) {
   const [queue] = useState(() => [...songs, ...extensionSongs]);
   const mainQueueLength = songs.length;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -13,8 +15,34 @@ export default function DJPanel({ songs, extensionSongs = [], winnerWindows = []
   const [autoHooks, setAutoHooks] = useState({});
   const [hookLoading, setHookLoading] = useState(false);
   const [playError, setPlayError] = useState(null);
+  const [showWinnersDrawer, setShowWinnersDrawer] = useState(false);
+  const [winnerBanner, setWinnerBanner] = useState(null);
   const intervalRef = useRef(null);
   const playStartRef = useRef(null);
+  const prevWinnersRef = useRef(null);
+
+  const calledSet = useMemo(() => new Set(calledSongs), [calledSongs]);
+  const winners = useMemo(() => computeWinners(cards, calledSet), [cards, calledSet]);
+
+  const BANNER_COLORS = { first: '#ffd700', second: '#c0c0c0', third: '#cd7f32' };
+
+  useEffect(() => {
+    if (prevWinnersRef.current === null) { prevWinnersRef.current = winners; return; }
+    const tiers = [{ key: 'first', label: '1st Prize' }, { key: 'second', label: '2nd Prize' }, { key: 'third', label: '3rd Prize' }];
+    const prev = prevWinnersRef.current;
+    for (const { key, label } of tiers) {
+      if (awarded[key]) continue;
+      const newSheets = (winners[key] ?? []).filter(n => !(prev[key] ?? []).includes(n));
+      if (newSheets.length > 0) { setWinnerBanner({ key, label, sheets: newSheets }); break; }
+    }
+    prevWinnersRef.current = winners;
+  }, [winners]);
+
+  useEffect(() => {
+    if (!winnerBanner) return;
+    const t = setTimeout(() => setWinnerBanner(null), 7000);
+    return () => clearTimeout(t);
+  }, [winnerBanner]);
 
   const currentSong = queue[currentIndex] ?? null;
   const isEnd = currentIndex >= queue.length;
@@ -153,7 +181,7 @@ export default function DJPanel({ songs, extensionSongs = [], winnerWindows = []
               </div>
             )}
           </div>
-          <button onClick={onOpenWinners} style={{ ...btn, background: 'rgba(98,0,234,0.45)', color: 'white', padding: '8px 16px', fontSize: '13px', border: '1px solid rgba(255,255,255,0.35)' }}>🏆 Winners</button>
+          <button onClick={() => setShowWinnersDrawer(d => !d)} style={{ ...btn, background: showWinnersDrawer ? 'rgba(98,0,234,0.8)' : 'rgba(98,0,234,0.45)', color: 'white', padding: '8px 16px', fontSize: '13px', border: '1px solid rgba(255,255,255,0.35)' }}>🏆 Winners</button>
         </div>
 
         {isEnd ? (
@@ -226,6 +254,27 @@ export default function DJPanel({ songs, extensionSongs = [], winnerWindows = []
           </div>
         )}
       </div>
+      {winnerBanner && (
+        <div style={{ position: 'absolute', top: '72px', left: '50%', transform: 'translateX(-50%)', zIndex: 1250, background: BANNER_COLORS[winnerBanner.key], color: '#1a0040', borderRadius: '12px', padding: '14px 18px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: '12px', minWidth: '280px', maxWidth: '90vw', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '22px' }}>🏆</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: '900', fontSize: '15px' }}>{winnerBanner.label}!</div>
+            <div style={{ fontSize: '13px', marginTop: '2px' }}>Sheet{winnerBanner.sheets.length > 1 ? 's' : ''} #{winnerBanner.sheets.join(', #')}</div>
+          </div>
+          <button onClick={() => setWinnerBanner(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#1a0040', padding: '0 2px', lineHeight: 1 }}>✕</button>
+        </div>
+      )}
+
+      {showWinnersDrawer && (
+        <WinnerChecker
+          cards={cards}
+          calledSongs={calledSongs}
+          onClose={() => setShowWinnersDrawer(false)}
+          awarded={awarded}
+          onAward={onAward}
+          drawer
+        />
+      )}
     </div>
   );
 }
