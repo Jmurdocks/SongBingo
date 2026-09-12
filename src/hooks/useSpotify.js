@@ -100,6 +100,7 @@ export function useSpotify(clientId) {
   const [sdkError, setSdkError] = useState(null);
   const playerRef = useRef(null);
   const audioRef = useRef(null);
+  const mobileDeviceIdRef = useRef(null);
   const refreshTimerRef = useRef(null);
 
   useEffect(() => {
@@ -230,6 +231,7 @@ export function useSpotify(clientId) {
   const disconnect = useCallback(() => {
     clearTimeout(refreshTimerRef.current);
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    mobileDeviceIdRef.current = null;
     playerRef.current?.disconnect();
     playerRef.current = null;
     sessionStorage.removeItem('spotify_access_token');
@@ -277,18 +279,34 @@ export function useSpotify(clientId) {
         return;
       }
       // Fall back to Spotify Connect — prefer the Spotify app on this device
-      const devicesData = await apiGet('https://api.spotify.com/v1/me/player/devices', accessToken);
-      const devices = devicesData.devices ?? [];
-      const target = devices.find(d => d.type === 'Tablet')
-        ?? devices.find(d => d.type === 'Smartphone')
-        ?? devices.find(d => d.is_active)
-        ?? devices[0];
-      if (!target) throw new Error('Open the Spotify app on your iPad, play any song, then try again.');
-      await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${target.id}`, {
+      let targetId = mobileDeviceIdRef.current;
+      if (!targetId) {
+        const devicesData = await apiGet('https://api.spotify.com/v1/me/player/devices', accessToken);
+        const devices = devicesData.devices ?? [];
+        const target = devices.find(d => d.type === 'Tablet')
+          ?? devices.find(d => d.type === 'Smartphone')
+          ?? devices.find(d => d.is_active)
+          ?? devices[0];
+        if (!target) throw new Error('Open the Spotify app on your iPad, play any song, then try again.');
+        targetId = target.id;
+        mobileDeviceIdRef.current = targetId;
+      }
+      // Transfer playback to wake the device up even if it went idle
+      await fetch('https://api.spotify.com/v1/me/player', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ device_ids: [targetId], play: false }),
+      });
+      const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${targetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ uris: [trackUri], position_ms: positionMs }),
       });
+      if (playRes.status === 404 || playRes.status === 403) {
+        mobileDeviceIdRef.current = null; // device gone, force re-lookup next time
+        const body = await playRes.json().catch(() => ({}));
+        throw new Error(body?.error?.message ?? 'Spotify device unavailable. Open the Spotify app and try again.');
+      }
       return;
     }
     let targetDeviceId = deviceId;
