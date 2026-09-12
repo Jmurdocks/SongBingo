@@ -42,14 +42,15 @@ async function fetchAllTracks(playlistId, accessToken) {
     const data = await apiGet(url, accessToken);
     tracks.push(
       ...data.items
-        .filter(item => item.item && !item.is_local && item.item.uri && item.item.type === 'track')
-        .map(item => ({
-          name: item.item.name,
-          artist: item.item.artists[0]?.name ?? '',
-          uri: item.item.uri,
-          id: item.item.id,
-          durationMs: item.item.duration_ms,
-          previewUrl: item.item.preview_url ?? null,
+        .map(item => item.track ?? item.item)
+        .filter(t => t && t.uri && t.type === 'track')
+        .map(t => ({
+          name: t.name,
+          artist: t.artists[0]?.name ?? '',
+          uri: t.uri,
+          id: t.id,
+          durationMs: t.duration_ms,
+          previewUrl: t.preview_url ?? null,
         }))
     );
     url = data.next;
@@ -265,12 +266,28 @@ export function useSpotify(clientId) {
   const playTrack = useCallback(async (trackUri, positionMs, previewUrl) => {
     if (!accessToken) return;
     if (isMobileBrowser()) {
-      if (!previewUrl) throw new Error('No preview available for this song. Re-import your playlist from Spotify to enable mobile playback.');
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      const audio = new Audio(previewUrl);
-      audio.volume = 1.0;
-      audioRef.current = audio;
-      await audio.play();
+      // Try preview URL first (works natively in mobile browser)
+      if (previewUrl) {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+        const audio = new Audio(previewUrl);
+        audio.volume = 1.0;
+        audioRef.current = audio;
+        await audio.play();
+        return;
+      }
+      // Fall back to Spotify Connect — prefer the Spotify app on this device
+      const devicesData = await apiGet('https://api.spotify.com/v1/me/player/devices', accessToken);
+      const devices = devicesData.devices ?? [];
+      const target = devices.find(d => d.type === 'Tablet')
+        ?? devices.find(d => d.type === 'Smartphone')
+        ?? devices.find(d => d.is_active)
+        ?? devices[0];
+      if (!target) throw new Error('Open the Spotify app on your iPad, play any song, then try again.');
+      await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${target.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ uris: [trackUri], position_ms: positionMs }),
+      });
       return;
     }
     let targetDeviceId = deviceId;
